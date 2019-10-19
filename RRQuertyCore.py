@@ -5,6 +5,8 @@ import urllib.request
 import json
 import RRQuertyCore
 import requests
+import time
+
 from dataclasses import dataclass
 from urllib.parse import urlencode, quote_plus
 
@@ -33,21 +35,29 @@ class HTTPClient:
     LOG_REQUEST_TEMPLATE = '%(method)s %(url)s%(request_body)s%(duration)s'
     LOG_RESPONSE_TEMPLATE = (LOG_REQUEST_TEMPLATE +
                              ' - HTTP %(status_code)s%(response_body)s%(duration)s')
-
+    CHROMEVER = 90
+    REFERCODE = 5
+    AGENTSTR = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.{ver} Safari/537.36'
+    REFER = 'https://pkk{code}.rosreestr.ru/'
     def __init__(self, timeout=3, keep_alive=False, default_headers=None):
         self.timeout = timeout
         self.keep_alive = keep_alive
         self.default_headers = default_headers or {
-            'referer':'https://pkk5.rosreestr.ru/',
+            'referer':self.REFER.format(code=self.REFERCODE),
             'accept': 'application/json, text/javascript, */*; q=0.01',
             'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
             'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'sec-fetch-mode' : 'cors',
             'sec-fetch-site' : 'same-origin',
-            'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36'
-            }
+            'user-agent':  self.AGENTSTR.format(ver=self.CHROMEVER)}
         self._session = None
+
+    def ChangeAgent(self):
+        self.CHROMEVER = self.CHROMEVER + 1
+        self.REFERCODE = self.REFERCODE + 1
+        self.default_headers['user-agent'] = self.AGENTSTR.format(ver=self.CHROMEVER)
+        self.default_headers['referer'] = self.REFER.format(code=self.REFERCODE)
 
     def _log_request(self, method, url, body, duration=None, log_method=logger.info):
         message_params = {
@@ -290,6 +300,8 @@ class PKK5RosreestrAPIClient:
     SEARCH_PARCEL_BY_COORDINATES_URL = SEARCH_OBJECT_BY_COORDINATES.format(object_type=1)
     SEARCH_PARCEL_BY_CADASTRAL_ID_URL = SEARCH_OBJECT_BY_CADASTRAL_ID.format(object_type=1)
 
+    BLOCKLENGTH = 11
+
     def __init__(self, timeout=5, keep_alive=False):
         self._http_client = HTTPClient(timeout=timeout, keep_alive=keep_alive)
 
@@ -323,23 +335,40 @@ class PKK5RosreestrAPIClient:
     def get_kns_by_geom_all(self, layerid, geometry, tolerance=16) -> dict:
         res = []
         cnt = 1
-        _skip = 0
+        _skip = 100
+        l = self.BLOCKLENGTH
         while cnt > 0:
-            tempres = self.get_kns_by_geom(layerid, geometry, tolerance=tolerance, skip=_skip)
+            if _skip > 0:
+                time.sleep(0)
+
+            tempres = self.get_kns_by_geom(layerid, geometry, tolerance=tolerance, limit=l, skip=_skip)
             cnt = tempres.__len__()
             res = res + tempres
-            _skip = _skip + 11
+            _skip = _skip + l + 1
 
         return res
 
     def get_kns_by_geom(self, layerid, geometry, limit=11, tolerance=16, skip = 0) -> dict:
         res = []
-        j = self.get_objs_by_geom(layerid, geometry, limit, tolerance, skip)
-        fs = j['features']
-        if fs :
-            for fea in fs:
-                cn = fea['attrs']['cn']
-                res.append(cn)
+        atempt = 4
+
+        j = None
+
+        while atempt > 0:
+            try:
+                j = self.get_objs_by_geom(layerid, geometry, limit, tolerance, skip)
+                atempt = 0
+            except :
+                self._http_client.ChangeAgent()
+                atempt = atempt - 1
+                #time.sleep(5)
+            
+        if j:
+            fs = j['features']
+            if fs :
+                for fea in fs:
+                    cn = fea['attrs']['cn']
+                    res.append(cn)
 
         return res
 
