@@ -335,7 +335,7 @@ class PKK5RosreestrAPIClient:
     def get_kns_by_geom_all(self, layerid, geometry, tolerance=16) -> dict:
         res = []
         cnt = 1
-        _skip = 100
+        _skip = 0
         l = self.BLOCKLENGTH
         while cnt > 0:
             if _skip > 0:
@@ -361,7 +361,7 @@ class PKK5RosreestrAPIClient:
             except :
                 self._http_client.ChangeAgent()
                 atempt = atempt - 1
-                #time.sleep(5)
+                time.sleep(2)
             
         if j:
             fs = j['features']
