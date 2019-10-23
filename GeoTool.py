@@ -2,7 +2,7 @@ import shapely
 import shapely.geometry
 
 wgs84metter = 8.983111749910168882500898311175e-6
-wgs84kmetter = wgs84metter * 10000
+wgs84kmetter = wgs84metter * 1000
 
 def SplitGeometry(jsonobj, splitter = wgs84kmetter):
     res = []

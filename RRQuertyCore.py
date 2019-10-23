@@ -6,6 +6,7 @@ import json
 import RRQuertyCore
 import requests
 import time
+import random
 
 from dataclasses import dataclass
 from urllib.parse import urlencode, quote_plus
@@ -25,6 +26,12 @@ def _get_duration_for_logging(duration: str) -> str:
 
 logger = logging.getLogger(__name__)
 
+class HTTPClientConst:
+    REFERCODE = random.randint(1, 10000)
+    CHROMEVER = random.randint(1, 10000)
+
+ClientConst = HTTPClientConst()
+
 class HTTPClient:
     GET_HTTP_METHOD = 'GET'
     POST_HTTP_METHOD = 'POST'
@@ -35,29 +42,32 @@ class HTTPClient:
     LOG_REQUEST_TEMPLATE = '%(method)s %(url)s%(request_body)s%(duration)s'
     LOG_RESPONSE_TEMPLATE = (LOG_REQUEST_TEMPLATE +
                              ' - HTTP %(status_code)s%(response_body)s%(duration)s')
-    CHROMEVER = 90
-    REFERCODE = 5
     AGENTSTR = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.{ver} Safari/537.36'
     REFER = 'https://pkk{code}.rosreestr.ru/'
+
+
+
     def __init__(self, timeout=3, keep_alive=False, default_headers=None):
+
+
         self.timeout = timeout
         self.keep_alive = keep_alive
         self.default_headers = default_headers or {
-            'referer':self.REFER.format(code=self.REFERCODE),
+            'referer':self.REFER.format(code=ClientConst.REFERCODE),
             'accept': 'application/json, text/javascript, */*; q=0.01',
             'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
             'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'sec-fetch-mode' : 'cors',
             'sec-fetch-site' : 'same-origin',
-            'user-agent':  self.AGENTSTR.format(ver=self.CHROMEVER)}
+            'user-agent':  self.AGENTSTR.format(ver=ClientConst.CHROMEVER)}
         self._session = None
 
     def ChangeAgent(self):
-        self.CHROMEVER = self.CHROMEVER + 1
-        self.REFERCODE = self.REFERCODE + 1
-        self.default_headers['user-agent'] = self.AGENTSTR.format(ver=self.CHROMEVER)
-        self.default_headers['referer'] = self.REFER.format(code=self.REFERCODE)
+        ClientConst.CHROMEVER = random.randint(1, 10000)
+        ClientConst.REFERCODE = random.randint(1, 10000)
+        self.default_headers['user-agent'] = self.AGENTSTR.format(ver=ClientConst.CHROMEVER)
+        self.default_headers['referer'] = self.REFER.format(code=ClientConst.REFERCODE)
 
     def _log_request(self, method, url, body, duration=None, log_method=logger.info):
         message_params = {
@@ -302,6 +312,8 @@ class PKK5RosreestrAPIClient:
 
     BLOCKLENGTH = 11
 
+    atempt = 4
+
     def __init__(self, timeout=5, keep_alive=False):
         self._http_client = HTTPClient(timeout=timeout, keep_alive=keep_alive)
 
@@ -350,17 +362,17 @@ class PKK5RosreestrAPIClient:
 
     def get_kns_by_geom(self, layerid, geometry, limit=11, tolerance=16, skip = 0) -> dict:
         res = []
-        atempt = 4
-
         j = None
 
-        while atempt > 0:
+        _atempt_ = self.atempt
+
+        while _atempt_ > 0:
             try:
                 j = self.get_objs_by_geom(layerid, geometry, limit, tolerance, skip)
-                atempt = 0
+                _atempt_ = 0
             except :
                 self._http_client.ChangeAgent()
-                atempt = atempt - 1
+                _atempt_ = _atempt_ - 1
                 time.sleep(2)
             
         if j:

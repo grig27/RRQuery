@@ -2,6 +2,7 @@ import argparse
 import RRQuertyCore
 import testgeom
 import GeoTool
+import time
 
 parser = argparse.ArgumentParser(description='process query rosreestr.')
 parser.add_argument('--layercode', type=int,
@@ -30,6 +31,7 @@ def query_kn_bygeom_split(layerid, geometry):
         geo = geoarr[i]
         print('process {index} of {len}'.format(index=i, len = len(geoarr)))
         tempres = query_kn_bygeom(lid, geo)
+        time.sleep(3)
         res = res + tempres
 
     uniqueres = [] 
