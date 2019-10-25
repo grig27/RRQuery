@@ -46,6 +46,8 @@ def query_kn_bygeom_split(layerid, geometry):
 
 
 if qtype == 'kn_by_geom':
-    query_kn_bygeom(lid, geometry)
+    res = query_kn_bygeom(lid, geometry)
+    print(res)
 if qtype == 'kn_by_geom_split':
-    query_kn_bygeom_split(lid, geometry)
+    res = query_kn_bygeom_split(lid, geometry)
+    print(res)

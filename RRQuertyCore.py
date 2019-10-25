@@ -356,6 +356,8 @@ class PKK5RosreestrAPIClient:
             tempres = self.get_kns_by_geom(layerid, geometry, tolerance=tolerance, limit=l, skip=_skip)
             cnt = tempres.__len__()
             res = res + tempres
+            if cnt < l:
+                break            
             _skip = _skip + l + 1
 
         return res
